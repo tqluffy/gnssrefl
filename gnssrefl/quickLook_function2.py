@@ -4,7 +4,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-import subprocess
+from pathlib import Path
 import warnings
 
 import scipy.interpolate
@@ -110,10 +110,8 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
 
     # make sure logs directory exists
     xdir = os.environ['REFL_CODE']
-    logdir = xdir + '/logs'
-
-    if not os.path.isdir(logdir):
-        subprocess.call(['mkdir', logdir])
+    logdir = Path(xdir) / 'logs'
+    logdir.mkdir(parents=True, exist_ok=True)
 
     # if it finds the station coordinates, it will return irefr as 1
     quick_p,quick_T,irefr, quick_e = quick_refraction(station)
@@ -549,4 +547,3 @@ def quick_refraction(station):
     p,T,dT,Tm,e,ah,aw,la,undu = refr.gpt2_1w(station, dmjd,dlat,dlong,ht,it)
 
     return p,T,irefr, e
-

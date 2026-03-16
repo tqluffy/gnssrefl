@@ -2989,30 +2989,23 @@ def result_directories(station,year,extension):
     cyear = str(year)
 
     f1 = xdir + '/' + cyear
-    if not os.path.isdir(f1):
-        subprocess.call(['mkdir',f1])
+    os.makedirs(f1, exist_ok=True)
 
     f1 = f1 + '/results'
-    if not os.path.isdir(f1):
-        subprocess.call(['mkdir',f1])
-
+    os.makedirs(f1, exist_ok=True)
 
     f1 = f1 + '/' + station
-    if not os.path.isdir(f1):
-        subprocess.call(['mkdir',f1])
+    os.makedirs(f1, exist_ok=True)
 
     if (extension != ''):
         f1 = f1 + '/' + extension
-        if not os.path.isdir(f1):
-            subprocess.call(['mkdir',f1])
+        os.makedirs(f1, exist_ok=True)
 
     f1 = xdir + '/' + cyear + '/phase'
-    if not os.path.isdir(f1):
-        subprocess.call(['mkdir',f1])
+    os.makedirs(f1, exist_ok=True)
 
     f1 = f1 + '/' + station
-    if not os.path.isdir(f1):
-        subprocess.call(['mkdir',f1])
+    os.makedirs(f1, exist_ok=True)
 
 def write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNoise,reqamp,tooclose2edge,fileid):
     """
@@ -3183,18 +3176,12 @@ def make_nav_dirs(yyyy):
         print(n)
         sys.exit()
     cyyyy = '{:04d}'.format(yyyy)
-    navfiledir = os.environ['ORBITS'] + '/' + cyyyy 
-    if not os.path.exists(navfiledir):
-        subprocess.call(['mkdir',navfiledir])
-        #print('making year directory')
-    navfiledir1 = os.environ['ORBITS'] + '/' + cyyyy + '/nav' 
-    if not os.path.exists(navfiledir1):
-        subprocess.call(['mkdir',navfiledir1])
-        #print('making nav specific directory')
+    navfiledir = os.environ['ORBITS'] + '/' + cyyyy
+    os.makedirs(navfiledir, exist_ok=True)
+    navfiledir1 = os.environ['ORBITS'] + '/' + cyyyy + '/nav'
+    os.makedirs(navfiledir1, exist_ok=True)
     navfiledir2 = os.environ['ORBITS'] + '/' + cyyyy + '/sp3'
-    if not os.path.exists(navfiledir2):
-        #print('making sp3 specific directory')
-        subprocess.call(['mkdir',navfiledir2])
+    os.makedirs(navfiledir2, exist_ok=True)
 
     return True
 
@@ -6372,7 +6359,7 @@ def set_subdir(subdir):
 
     outdir = xdir  + '/Files/' + subdir 
     if not os.path.exists(outdir) :
-        subprocess.call(['mkdir', '-p', outdir])
+        os.makedirs(outdir, exist_ok=True)
 
     return
 

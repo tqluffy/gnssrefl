@@ -1,12 +1,13 @@
 import warnings
 import argparse
 import os
-import subprocess
 import sys
 import time
-import wget
 import multiprocessing
 from functools import partial
+from pathlib import Path
+import shutil
+from urllib.request import urlretrieve
 
 #import gnssrefl.gnssir as guts
 import gnssrefl.gnssir_v2 as guts2
@@ -380,12 +381,12 @@ def gnssir(station: str, year: int, doy: int, snr: int = 66, plt: bool = False, 
         local_copy = 'gnssrefl/' + picklefile
         if os.path.isfile(local_copy):
             print('found local copy of refraction file')
-            subprocess.call(['cp', '-f', local_copy, xdir + '/input/'])
+            shutil.copy2(local_copy, Path(xdir) / 'input' / picklefile)
         else:
             print('download and move refraction file')
             url='https://github.com/kristinemlarson/gnssrefl/raw/master/gnssrefl/gpt_1wA.pickle'
-            wget.download(url, picklefile)
-            subprocess.call(['mv', '-f', picklefile, xdir + '/input/'])
+            urlretrieve(url, picklefile)
+            shutil.move(picklefile, Path(xdir) / 'input' / picklefile)
 
     # added debug aug 3/2024
     args = {'station': station.lower(), 'year': year, 'doy': doy, 'snr_type': snr, 'extension': extension, 'lsp': lsp, 'debug': debug}
