@@ -348,17 +348,33 @@ def save_arc(meta, data, sdir, station, year, doy, savearcs_format='txt'):
 
 
 def move_arc_to_failqc(meta, station, year, doy, extension=''):
-    """Move a saved arc file from arcs/ to arcs/failQC/."""
+    """Move a saved arc file from arcs/ to arcs/failQC/.
+
+    Supports both ``.txt`` and ``.pickle`` arc outputs.
+    """
     fm = FileManagement(station, "arcs_directory", year=year, doy=doy,
                         extension=extension)
     sdir = str(fm.get_directory_path()) + '/'
-    fname = _get_arc_filename(sdir, meta['sat'], meta['freq'],
-                              meta['az_min_ele'], meta['arc_timestamp'])
-    if not fname or not os.path.isfile(fname):
+    txt_name = _get_arc_filename(sdir, meta['sat'], meta['freq'],
+                                 meta['az_min_ele'], meta['arc_timestamp'])
+    if not txt_name:
         return
-    dest = _get_arc_filename(sdir + 'failQC/', meta['sat'], meta['freq'],
-                             meta['az_min_ele'], meta['arc_timestamp'])
-    shutil.move(fname, dest)
+
+    candidate_files = [txt_name, txt_name[:-4] + '.pickle']
+    src = next((f for f in candidate_files if os.path.isfile(f)), None)
+    if src is None:
+        return
+
+    dest_txt = _get_arc_filename(sdir + 'failQC/', meta['sat'], meta['freq'],
+                                 meta['az_min_ele'], meta['arc_timestamp'])
+    if not dest_txt:
+        return
+
+    if src.endswith('.pickle'):
+        dest = dest_txt[:-4] + '.pickle'
+    else:
+        dest = dest_txt
+    shutil.move(src, dest)
 
 
 def apply_refraction(snr_array, lsp, year, doy):
