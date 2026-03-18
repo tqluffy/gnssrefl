@@ -582,16 +582,26 @@ def calculate_peak2second(pz):
     Returns
     -------
     float
-        peak2second ratio. Returns ``np.inf`` when there is no valid second peak
-        (e.g., fewer than two finite amplitudes or second peak <= 0).
+        peak2second ratio (main peak / second-highest *distinct* peak).
+        Returns ``np.inf`` when there is no valid second peak
+        (e.g., fewer than two finite amplitudes, no distinct second peak,
+        or second peak <= 0).
     """
     finite_pz = np.asarray(pz)[np.isfinite(pz)]
     if finite_pz.size < 2:
         return np.inf
 
-    top_two = np.sort(finite_pz)[-2:]
-    second_peak = top_two[0]
-    max_peak = top_two[1]
+    max_peak = np.max(finite_pz)
+
+    # use the highest *distinct* value below the main peak.
+    # This avoids artificial ratios of ~1.0 when the global maximum appears
+    # at multiple adjacent bins or repeated values.
+    eps = np.finfo(float).eps * max(1.0, abs(max_peak))
+    lower_peaks = finite_pz[finite_pz < (max_peak - eps)]
+    if lower_peaks.size == 0:
+        return np.inf
+
+    second_peak = np.max(lower_peaks)
 
     if second_peak <= 0:
         return np.inf
