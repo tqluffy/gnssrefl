@@ -25,6 +25,7 @@ def parse_arguments():
     parser.add_argument("-nr1",default=None, type=float, help="Lower limit RH used for noise region in QC(m)")
     parser.add_argument("-nr2",default=None, type=float, help="Upper limit RH used for noise region in QC(m)")
     parser.add_argument("-peak2noise", default=None, type=float, help="peak to noise ratio used for QC")
+    parser.add_argument("-peak2second", default=None, type=float, help="main-peak to second-peak ratio used for QC (0 disables)")
     parser.add_argument("-ampl", default=None, type=float, help="Required spectral peak amplitude for QC")
     parser.add_argument("-allfreq", default=None, type=str, help="Set to T to include all GNSS signals")
     parser.add_argument("-l1", default=None, type=str, help="Set to T to use only GPS L1")
@@ -76,6 +77,7 @@ def parse_arguments():
 
 def make_gnssir_input(station: str, lat: float=0, lon: float=0, height: float=0, e1: float = 5.0, e2: float = 25.0,
        h1: float = 0.5, h2: float = 8.0, nr1: float = None, nr2: float = None, peak2noise: float = 2.8, 
+       peak2second: float = 0.0,
        ampl: float = 5.0, allfreq: bool = False, l1: bool = False, l2c: bool = False, l5: bool = False, 
        xyz: bool = False, refraction: bool = True, extension: str = '', ediff: float=2.0, 
        delTmax: float=75.0, frlist: list=[], azlist2: list=[0,360], ellist : list=[], refr_model : str="1", 
@@ -205,6 +207,10 @@ def make_gnssir_input(station: str, lat: float=0, lon: float=0, height: float=0,
     peak2noise : float, optional
         peak to noise ratio used for QC.
         default is 2.7 (just a starting point for water - should be 3 or 3.5 for snow or soil...)
+
+    peak2second : float, optional
+        ratio of the highest to second-highest periodogram peaks used for QC.
+        default is 0.0, which disables this QC filter.
 
     ampl : float, optional
         spectral peak amplitude for QC. default is 6.0
@@ -430,6 +436,7 @@ def make_gnssir_input(station: str, lat: float=0, lon: float=0, height: float=0,
 
     lsp['NReg'] = [nr1, nr2]
     lsp['PkNoise'] = peak2noise
+    lsp['peak2second'] = peak2second
 
     # Use FileManagement to get JSON file path with new directory structure
     json_manager = FileManagement(station, 'make_json', extension=extension)

@@ -7,7 +7,7 @@ import sys
 
 import gnssrefl.gnssir_v2 as guts
 import gnssrefl.gps as g
-from gnssrefl.utils import FileManagement, check_arc_quality, format_qc_summary
+from gnssrefl.utils import FileManagement, calculate_peak2second, check_arc_quality, format_qc_summary
 
 def retrieve_rh(station,year,doy,extension, lsp, arcs, screenstats, irefr,logid,logfilename,dbhz):
     """
@@ -103,10 +103,11 @@ def retrieve_rh(station,year,doy,extension, lsp, arcs, screenstats, irefr,logid,
 
                 nij = pz[(px > NReg[0]) & (px < NReg[1])]
                 Noise = np.mean(nij) if len(nij) > 0 else 0
+                peak2second = calculate_peak2second(pz)
 
                 iAzim = int(az_min_ele)
 
-                passed, reason = check_arc_quality(meta, maxF, maxAmp, Noise, lsp)
+                passed, reason = check_arc_quality(meta, maxF, maxAmp, Noise, lsp, peak2second=peak2second)
                 if not passed:
                     qc_counts[reason] += 1
                     rejected_arcs += 1

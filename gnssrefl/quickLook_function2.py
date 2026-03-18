@@ -16,10 +16,11 @@ import gnssrefl.rinex2snr as rinex
 import gnssrefl.gnssir_v2 as gnssir_v2
 import gnssrefl.read_snr_files as snr
 from gnssrefl.utils import FileManagement
+from gnssrefl.utils import calculate_peak2second
 
 
 def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pele,satsel,PkNoise,
-        pltscreen,azim1,azim2,ediff, delTmax,hires_figs,**kwargs):
+        pltscreen,azim1,azim2,ediff, delTmax,hires_figs,peak2second=0.0,**kwargs):
     """
     This is the main function to compute spectral characteristics of a SNR file.
     It takes in all user inputs and calculates reflector heights. It makes two png files to summarize
@@ -73,6 +74,8 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
          maximum arc length in minutes
     hires_figs: bool
          whether to use eps instead of png
+    peak2second : float
+         ratio between main peak and second peak for QC (0 disables)
 
     """
     # March 28, 2025 made 307 no longer illegal
@@ -251,6 +254,7 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
                             Noise = 1
                             if (len(nij) > 0):
                                 Noise = np.mean(nij)
+                            pk2second = calculate_peak2second(pz)
 
                             iAzim = int(avgAzim)
 
@@ -260,7 +264,8 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
                             if abs(maxF - maxH) < 0.10: #  peak too close to max value
                                 tooclose = True
 
-                            if (not tooclose) & (delT < delTmax) & (maxAmp > requireAmp) & (maxAmp/Noise > PkNoise) & (iAzim >= azim1) & (iAzim <= azim2):
+                            peak2second_ok = (peak2second <= 0) or (pk2second > peak2second)
+                            if (not tooclose) & (delT < delTmax) & (maxAmp > requireAmp) & (maxAmp/Noise > PkNoise) & peak2second_ok & (iAzim >= azim1) & (iAzim <= azim2):
                                 rhout.write('{0:3.0f} {1:6.3f} {2:3.0f} {3:4.1f} {4:3.1f} {5:6.2f} {6:2.0f} \n '.format(iAzim,maxF,satNu,
                                     maxAmp,maxAmp/Noise,UTCtime,1))
                                 lw=1.5 ; colorful(a,px,pz,lw,True,saxis)
@@ -549,4 +554,3 @@ def quick_refraction(station):
     p,T,dT,Tm,e,ah,aw,la,undu = refr.gpt2_1w(station, dmjd,dlat,dlong,ht,it)
 
     return p,T,irefr, e
-
