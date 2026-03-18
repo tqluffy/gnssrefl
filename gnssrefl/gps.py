@@ -2014,9 +2014,9 @@ def open_outputfile(station,year,doy,extension):
 #       put a header in the output file
         fout.write(tem)
         fout.write("% Phase Center corrections have NOT been applied \n")
-        fout.write("% year, doy, RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise  DelT     MJD   refr-model\n")
-        fout.write("% (1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16)   (17)\n")
-        fout.write("%             m        hrs    deg   v/v    deg    deg  values            hrs             min           0 is none \n")
+        fout.write("% year, doy, RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise  DelT     MJD   refr-model  Pk2Sec\n")
+        fout.write("% (1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16)   (17)       (18)\n")
+        fout.write("%             m        hrs    deg   v/v    deg    deg  values            hrs             min           0 is none       ratio \n")
     except:
         print('problem on first attempt - so try making results directory')
         f1 = xdir + '/' + str(year) + '/results/'
@@ -2055,13 +2055,13 @@ def lsp_header(station,**kwargs):
     tem =  ' station ' + station + ' https://github.com/kristinemlarson/gnssrefl ' + versionNumber  + '\n'
     line2= ' Phase Center corrections have NOT been applied \n'
     if longer_line: 
-        line3 =  '(1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16) (17) (18,19,20,21,22)\n'
-        line4 = '            RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise, DelT ,   MJD, refr, MM DD HH MM SS \n'
-        line5= '            m        hrs    deg   v/v    deg    deg  values        set   hrs             min           model \n'
+        line3 =  '(1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16) (17) (18,19,20,21,22) (23)\n'
+        line4 = '            RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise, DelT ,   MJD, refr, MM DD HH MM SS, Pk2Sec \n'
+        line5= '            m        hrs    deg   v/v    deg    deg  values        set   hrs             min           model              ratio \n'
     else:
-        line3 =  '(1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16) (17) \n'
-        line4= ' year, doy, RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise,  DelT,    MJD, refr \n'
-        line5= '            m        hrs    deg   v/v    deg    deg  values        set  hrs            min           model \n'
+        line3 =  '(1)  (2)   (3) (4)  (5)     (6)   (7)    (8)    (9)   (10)  (11) (12) (13)    (14)     (15)    (16) (17) (18)\n'
+        line4= ' year, doy, RH, sat,UTCtime, Azim, Amp,  eminO, emaxO,NumbOf,freq,rise,EdotF, PkNoise,  DelT,    MJD, refr, Pk2Sec \n'
+        line5= '            m        hrs    deg   v/v    deg    deg  values        set  hrs            min           model  ratio \n'
 
 #   put all the lines together .... 
     all = tem + line2 + line3 + line4 + line5
@@ -3014,7 +3014,8 @@ def result_directories(station,year,extension):
     if not os.path.isdir(f1):
         subprocess.call(['mkdir',f1])
 
-def write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNoise,reqamp,tooclose2edge,fileid):
+def write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNoise,reqamp,tooclose2edge,fileid,
+        peak2second=None, peak2second_req=0.0):
     """
     prints out various QC fails to the screen
 
@@ -3046,12 +3047,18 @@ def write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNois
         wehther peak value is too close to begining or ending of the RH constraints
     fileid : ?
         file identifier
+    peak2second : float, optional
+        observed main peak / second peak ratio
+    peak2second_req : float, optional
+        required main peak / second peak ratio
 
     """
     if fileid is not None:
         fileid.write('delT {0:3.1f} delTmax {1:3.1f} Obs emin/emax {2:6.2f} {3:6.2f} Setting e1 e2 ediff {4:6.2f} {5:6.2f} {6:3.1f} \n'.format(delT, delTmax,eminObs,emaxObs,e1,e2,ediff))
 
         fileid.write('Obs/Request Amplitude {0:5.2f} {1:5.2f} Peak2Noise {2:5.2f} {3:5.2f} \n'.format(maxAmp,reqamp,Noise,PkNoise))
+        if (peak2second is not None) and (peak2second_req is not None) and (peak2second_req > 0):
+            fileid.write('Obs/Request Peak2Second {0:5.2f} {1:5.2f} \n'.format(peak2second, peak2second_req))
         if tooclose2edge:
             fileid.write('     Retrieved reflector height too close to the edge of the RH space')
 
@@ -3078,6 +3085,9 @@ def write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNois
             fileid.write('     Obs Ampl {0:.1f} vs {1:.1f} required \n'.format(maxAmp,reqamp  ))
         if maxAmp/Noise < PkNoise:
             fileid.write('     Obs PkN  {0:.1f} vs {1:.1f} required \n'.format(maxAmp/Noise, PkNoise ))
+        if (peak2second is not None) and (peak2second_req is not None) and (peak2second_req > 0):
+            if peak2second < peak2second_req:
+                fileid.write('     Obs Pk2Sec {0:.1f} vs {1:.1f} required \n'.format(peak2second, peak2second_req))
         #if tooclose2edge:
         #    fileid.write('     Retrieved reflector height too close to the edge of the RH space \n')
         
@@ -7579,4 +7589,3 @@ def one_gfz_archive_to_rule_them_all(year,month,day,orbtype,hour):
             print('tried and failed to download ')
 
     return filename, fdir, foundit
-

@@ -113,9 +113,10 @@ def retrieve_rh(station,year,doy,extension, lsp, arcs, screenstats, irefr,logid,
                     rejected_arcs += 1
 
                     if screenstats:
-                        logid.write('FAILED QC for Azimuth {0:.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:5.2f} \n'.format(iAzim,satNu,UTCtime,maxF))
+                        logid.write('FAILED QC for Azimuth {0:.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:5.2f} Pk2Sec {4:5.2f}\n'.format(iAzim,satNu,UTCtime,maxF,peak2second))
                         tooclose = reason == 'tooclose'
-                        g.write_QC_fails(delT,lsp['delTmax'],eminObs,emaxObs,e1,e2,lsp['ediff'],maxAmp,Noise,PkNoise,reqAmp_dict[f],tooclose,logid)
+                        g.write_QC_fails(delT,lsp['delTmax'],eminObs,emaxObs,e1,e2,lsp['ediff'],maxAmp,Noise,PkNoise,reqAmp_dict[f],tooclose,logid,
+                                peak2second=peak2second, peak2second_req=lsp.get('peak2second', 0.0))
                     if plot_screen:
                         failed = True
                         guts.local_update_plot(x,y,px,pz,ax1,ax2,failed)
@@ -126,16 +127,16 @@ def retrieve_rh(station,year,doy,extension, lsp, arcs, screenstats, irefr,logid,
                 betterUTC = xhr + xmin/60 + xsec/3600
 
                 if lsp['mmdd']:
-                    onelsp = [xyear,xdoy,maxF,satNu,betterUTC,az_min_ele,maxAmp,eminObs,emaxObs,Nv,f,riseSet,Edot2,maxAmp/Noise,delT,MJD,irefr,xmonth,xday,xhr,xmin,xsec]
+                    onelsp = [xyear,xdoy,maxF,satNu,betterUTC,az_min_ele,maxAmp,eminObs,emaxObs,Nv,f,riseSet,Edot2,maxAmp/Noise,delT,MJD,irefr,xmonth,xday,xhr,xmin,xsec,peak2second]
                 else:
-                    onelsp = [xyear,xdoy,maxF,satNu,betterUTC,az_min_ele,maxAmp,eminObs,emaxObs,Nv,f,riseSet,Edot2,maxAmp/Noise,delT,MJD,irefr]
+                    onelsp = [xyear,xdoy,maxF,satNu,betterUTC,az_min_ele,maxAmp,eminObs,emaxObs,Nv,f,riseSet,Edot2,maxAmp/Noise,delT,MJD,irefr,peak2second]
 
                 good_arcs += 1
                 all_lsp.append(onelsp)
 
                 if screenstats:
                     T = ' ' + g.nicerTime(betterUTC)
-                    logid.write('SUCCESS Azimuth {0:3.0f} Sat {1:3.0f} RH {2:7.3f} m PkNoise {3:4.1f} Amp {4:4.1f} Fr{5:3.0f} UTC {6:6s} DT {7:3.0f} \n'.format(iAzim,satNu,maxF,maxAmp/Noise,maxAmp,f,T,round(delT)))
+                    logid.write('SUCCESS Azimuth {0:3.0f} Sat {1:3.0f} RH {2:7.3f} m PkNoise {3:4.1f} Pk2Sec {4:4.1f} Amp {5:4.1f} Fr{6:3.0f} UTC {7:6s} DT {8:3.0f} \n'.format(iAzim,satNu,maxF,maxAmp/Noise,peak2second,maxAmp,f,T,round(delT)))
 
                 if plot_screen:
                     failed = False
@@ -194,9 +195,9 @@ def retrieve_rh(station,year,doy,extension, lsp, arcs, screenstats, irefr,logid,
         allL = allL[ii,:]
 
         if longer_line:
-            f = '%4.0f %3.0f %6.3f %3.0f %6.3f %6.2f %6.2f %6.2f %6.2f %4.0f  %3.0f  %2.0f %8.5f %6.2f %7.2f %12.6f %2.0f %2.0f %2.0f %2.0f %2.0f %2.0f '
+            f = '%4.0f %3.0f %6.3f %3.0f %6.3f %6.2f %6.2f %6.2f %6.2f %4.0f  %3.0f  %2.0f %8.5f %6.2f %7.2f %12.6f %2.0f %2.0f %2.0f %2.0f %2.0f %2.0f %6.2f '
         else:
-            f = '%4.0f %3.0f %6.3f %3.0f %6.3f %6.2f %6.2f %6.2f %6.2f %4.0f  %3.0f  %2.0f %8.5f %6.2f %7.2f %12.6f %2.0f'
+            f = '%4.0f %3.0f %6.3f %3.0f %6.3f %6.2f %6.2f %6.2f %6.2f %4.0f  %3.0f  %2.0f %8.5f %6.2f %7.2f %12.6f %2.0f %6.2f'
 
     # this is really just overwriting what I had before. However, This will be sorted.
         testfile = FileManagement(station, 'gnssir_result', year, doy, extension=extension).get_file_path()
