@@ -29,6 +29,7 @@ def parse_arguments():
     parser.add_argument("-plt", default=None, help="plt to screen (True or False)", type=str)
     parser.add_argument("-fr", default=None, nargs="*",type=int, help="Frequency override for json, e.g. 1 101 for GPS and Glonass L1")
     parser.add_argument("-ampl", default=None, type=float, help="Min spectral amplitude ")
+    parser.add_argument("-peak2second", default=None, type=float, help="Main-peak to second-peak QC ratio override")
     parser.add_argument("-sat", default=None, type=int, help="Only look at this satellite")
     parser.add_argument("-doy_end", default=None, type=int, help="doy end")
     parser.add_argument("-year_end", default=None, type=int, help="year end")
@@ -65,7 +66,7 @@ def parse_arguments():
 
 
 def gnssir(station: str, year: int, doy: int, snr: int = 66, plt: bool = False, fr: list= [], 
-        ampl: float = None, sat: int = None, doy_end: int = None, year_end: int = None, azim1: int = 0, 
+        ampl: float = None, peak2second: float = None, sat: int = None, doy_end: int = None, year_end: int = None, azim1: int = 0, 
         azim2: int = 360, nooverwrite: bool = False, extension: str = '', compress: bool = False, 
         screenstats: bool = True, delTmax: int = None, e1: float = None, e2: float = None, 
            mmdd: bool = False, gzip: bool = None, dec : int = 1, savearcs : bool = False, savearcs_format: str='txt',
@@ -164,6 +165,9 @@ def gnssir(station: str, year: int, doy: int, snr: int = 66, plt: bool = False, 
 
     ampl : float, optional
         minimum spectral peak amplitude. default is None
+    peak2second : float, optional
+        minimum ratio between the highest and second-highest periodogram peaks.
+        default is None (use value from json).
     sat : int, optional
         satellite number to only look at that single satellite. default is None.
     doy_end : int, optional
@@ -351,6 +355,9 @@ def gnssir(station: str, year: int, doy: int, snr: int = 66, plt: bool = False, 
         # but use the frequency list from their json ...  which i think has max of 12
         # but use 14 to be sure
         lsp['reqAmp'] = [ampl for i in range(14)]
+
+    if peak2second is not None:
+        lsp['peak2second'] = peak2second
 
     if sat is not None:
         lsp['onesat'] = [sat]
@@ -568,5 +575,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

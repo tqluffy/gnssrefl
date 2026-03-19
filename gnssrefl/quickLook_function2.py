@@ -16,10 +16,11 @@ import gnssrefl.rinex2snr as rinex
 import gnssrefl.gnssir_v2 as gnssir_v2
 import gnssrefl.read_snr_files as snr
 from gnssrefl.utils import FileManagement
+from gnssrefl.utils import calculate_peak2second
 
 
 def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pele,satsel,PkNoise,
-        pltscreen,azim1,azim2,ediff, delTmax,hires_figs,**kwargs):
+        pltscreen,azim1,azim2,ediff, delTmax,hires_figs,peak2second=0.0,**kwargs):
     """
     This is the main function to compute spectral characteristics of a SNR file.
     It takes in all user inputs and calculates reflector heights. It makes two png files to summarize
@@ -73,6 +74,8 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
          maximum arc length in minutes
     hires_figs: bool
          whether to use eps instead of png
+    peak2second : float
+         ratio between main peak and second peak for QC (0 disables)
 
     """
     # March 28, 2025 made 307 no longer illegal
@@ -251,6 +254,7 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
                             Noise = 1
                             if (len(nij) > 0):
                                 Noise = np.mean(nij)
+                            pk2second = calculate_peak2second(pz)
 
                             iAzim = int(avgAzim)
 
@@ -260,15 +264,16 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
                             if abs(maxF - maxH) < 0.10: #  peak too close to max value
                                 tooclose = True
 
-                            if (not tooclose) & (delT < delTmax) & (maxAmp > requireAmp) & (maxAmp/Noise > PkNoise) & (iAzim >= azim1) & (iAzim <= azim2):
-                                rhout.write('{0:3.0f} {1:6.3f} {2:3.0f} {3:4.1f} {4:3.1f} {5:6.2f} {6:2.0f} \n '.format(iAzim,maxF,satNu,
-                                    maxAmp,maxAmp/Noise,UTCtime,1))
+                            peak2second_ok = (peak2second <= 0) or (pk2second > peak2second)
+                            if (not tooclose) & (delT < delTmax) & (maxAmp > requireAmp) & (maxAmp/Noise > PkNoise) & peak2second_ok & (iAzim >= azim1) & (iAzim <= azim2):
+                                rhout.write('{0:3.0f} {1:6.3f} {2:3.0f} {3:4.1f} {4:3.1f} {5:6.2f} {6:2.0f} {7:4.1f}\n '.format(iAzim,maxF,satNu,
+                                    maxAmp,maxAmp/Noise,UTCtime,1,pk2second))
                                 lw=1.5 ; colorful(a,px,pz,lw,True,saxis)
                                 idc = stitles[a]
                                 data[idc][satNu] = [px,pz]
                                 datakey[idc][satNu] = [avgAzim, maxF, satNu,f,maxAmp,maxAmp/Noise, UTCtime]
                                 if screenstats:
-                                    print('SUCCESS for Azimu {0:5.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:7.3f} PkNoise {4:6.2f}'.format( avgAzim,satNu,UTCtime,maxF,maxAmp/Noise))
+                                    print('SUCCESS for Azimu {0:5.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:7.3f} PkNoise {4:6.2f} Pk2Sec {5:6.2f}'.format( avgAzim,satNu,UTCtime,maxF,maxAmp/Noise,pk2second))
                                 # try to track the maximum amplitude in each quadrant this way
                                 newl=[a,maxAmp]; axisSize =np.append(axisSize,[newl], axis=0)
 
@@ -276,15 +281,16 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
                                 if (iAzim > azim1) & (iAzim < azim2):
                                     lw = 0.5 ; colorful(a,px,pz,lw,False,saxis) # add to the plot
                                     if screenstats:
-                                        print('FAILED QC for Azimuth {0:5.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:7.3f} '.format( avgAzim,satNu,UTCtime,maxF))
+                                        print('FAILED QC for Azimuth {0:5.1f} Satellite {1:2.0f} UTC {2:5.2f} RH {3:7.3f} Pk2Sec {4:6.2f}'.format( avgAzim,satNu,UTCtime,maxF,pk2second))
                                         logout = None
-                                        g.write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNoise,requireAmp,tooclose,logout)
+                                        g.write_QC_fails(delT,delTmax,eminObs,emaxObs,e1,e2,ediff,maxAmp, Noise,PkNoise,requireAmp,tooclose,logout,
+                                                peak2second=pk2second, peak2second_req=peak2second)
 
                                     idc = 'f' + stitles[a]
                                     data[idc][satNu] = [px,pz]
                                     datakey[idc][satNu] = [avgAzim, maxF, satNu,f,maxAmp,maxAmp/Noise, UTCtime]
-                                    rhout.write('{0:3.0f} {1:6.3f} {2:3.0f} {3:4.1f} {4:3.1f} {5:6.2f} {6:2.0f} \n '.format(iAzim,maxF,
-                                        satNu,maxAmp,maxAmp/Noise,UTCtime,-1))
+                                    rhout.write('{0:3.0f} {1:6.3f} {2:3.0f} {3:4.1f} {4:3.1f} {5:6.2f} {6:2.0f} {7:4.1f}\n '.format(iAzim,maxF,
+                                        satNu,maxAmp,maxAmp/Noise,UTCtime,-1,pk2second))
 
         rhout.close()
 
@@ -308,14 +314,14 @@ def quickLook_function(station, year, doy, snr_type,f,e1,e2,minH,maxH,reqAmp,pel
 
         plt.savefig(filename)
         # now make second plot
-        goodbad(quicklog,station,year,doy,minH,maxH,PkNoise,reqAmp,f,e1,e2,hires_figs)
+        goodbad(quicklog,station,year,doy,minH,maxH,PkNoise,peak2second,reqAmp,f,e1,e2,hires_figs)
 
         if pltscreen:
             plt.show()
 
     return data,datakey
 
-def goodbad(fname,station,year,doy,h1,h2,PkNoise,reqAmp,freq,e1,e2,hires_figs):
+def goodbad(fname,station,year,doy,h1,h2,PkNoise,peak2second,reqAmp,freq,e1,e2,hires_figs):
     """
     makes a plot that shows "good" and "bad" refletor height retrievals as a 
     function of azimuth
@@ -336,6 +342,8 @@ def goodbad(fname,station,year,doy,h1,h2,PkNoise,reqAmp,freq,e1,e2,hires_figs):
         max reflector height (m)
     PkNoise : float
         peak 2 noise QC
+    peak2second : float
+        peak to second-peak QC threshold
     reqAmp : float
         required LSP amplitude
     freq : int
@@ -369,7 +377,7 @@ def goodbad(fname,station,year,doy,h1,h2,PkNoise,reqAmp,freq,e1,e2,hires_figs):
     ik = (a[:,6] == -1) # bad retrievals
     fs = 12
     plt.figure(figsize=(10,6))
-    plt.subplot(3,1,1)
+    plt.subplot(4,1,1)
     plt.plot(a[ij,0], a[ij,1], 'o',color='blue',label='good')
     plt.plot(a[ik,0], a[ik,1], 'o',color='gray', label='bad')
     ydoy = ' ' + str(year) + '/' + str(doy) + ' '
@@ -387,7 +395,7 @@ def goodbad(fname,station,year,doy,h1,h2,PkNoise,reqAmp,freq,e1,e2,hires_figs):
     ax.axes.xaxis.set_ticklabels([])
 
 
-    plt.subplot(3,1,2)
+    plt.subplot(4,1,2)
     plt.plot([0, 360], [PkNoise, PkNoise], 'k--',label='QC value used')
     plt.plot(a[ij,0], a[ij,4], 'o',color='blue')
     plt.plot(a[ik,0], a[ik,4], 'o',color='gray')
@@ -400,12 +408,29 @@ def goodbad(fname,station,year,doy,h1,h2,PkNoise,reqAmp,freq,e1,e2,hires_figs):
     ax = plt.gca()
     ax.axes.xaxis.set_ticklabels([])
 
-    plt.subplot(3,1,3)
+    plt.subplot(4,1,3)
     plt.plot([0, 360], [reqAmp, reqAmp], 'k--',label='QC value used')
     plt.plot(a[ij,0], a[ij,3], 'o',color='blue')
     plt.plot(a[ik,0], a[ik,3], 'o',color='gray') 
     plt.legend(loc="upper right")
     plt.ylabel('Spectral Peak Ampl.',fontsize=fs)
+    plt.xlabel('Azimuth (degrees)',fontsize=fs)
+    plt.grid()
+    plt.xticks(fontsize=fs)
+    plt.yticks(fontsize=fs)
+    plt.xlim((0, 360))
+    ax = plt.gca()
+    ax.axes.xaxis.set_ticklabels([])
+
+    plt.subplot(4,1,4)
+    if peak2second > 0:
+        plt.plot([0, 360], [peak2second, peak2second], 'k--',label='QC value used')
+    else:
+        plt.plot([0, 360], [0, 0], 'k--',label='QC disabled')
+    plt.plot(a[ij,0], a[ij,7], 'o',color='blue')
+    plt.plot(a[ik,0], a[ik,7], 'o',color='gray')
+    plt.legend(loc="upper right")
+    plt.ylabel('peak2second',fontsize=fs)
     plt.xlabel('Azimuth (degrees)',fontsize=fs)
     plt.grid()
     plt.xticks(fontsize=fs)
@@ -549,4 +574,3 @@ def quick_refraction(station):
     p,T,dT,Tm,e,ah,aw,la,undu = refr.gpt2_1w(station, dmjd,dlat,dlong,ht,it)
 
     return p,T,irefr, e
-

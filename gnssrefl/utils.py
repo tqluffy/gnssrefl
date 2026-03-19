@@ -553,7 +553,7 @@ def read_files_in_dir(directory, transpose=False):
     else:
         raise ValueError(f"path is not absolute. Please provide an absolute path: {dir_path}")
 
-QC_FILTER_ORDER = ['track', 'ediff', 'L2C/L5', 'tooclose', 'noise', 'amp', 'pk2noise', 'delT']
+QC_FILTER_ORDER = ['track', 'ediff', 'L2C/L5', 'tooclose', 'noise', 'amp', 'pk2noise', 'pk2second', 'delT']
 
 
 def circular_mean_deg(angles):
@@ -571,12 +571,51 @@ def circular_distance_deg(a, b):
     return np.minimum(d, 360 - d)
 
 
-def check_arc_quality(meta, peak_rh, max_amp, noise, lsp):
+def calculate_peak2second(pz):
+    """Return the ratio between the highest and second-highest periodogram amplitudes.
+
+    Parameters
+    ----------
+    pz : array_like
+        Lomb-Scargle spectral amplitudes.
+
+    Returns
+    -------
+    float
+        peak2second ratio (main peak / second-highest *distinct* peak).
+        Returns ``np.inf`` when there is no valid second peak
+        (e.g., fewer than two finite amplitudes, no distinct second peak,
+        or second peak <= 0).
+    """
+    finite_pz = np.asarray(pz)[np.isfinite(pz)]
+    if finite_pz.size < 2:
+        return np.inf
+
+    max_peak = np.max(finite_pz)
+
+    # use the highest *distinct* value below the main peak.
+    # This avoids artificial ratios of ~1.0 when the global maximum appears
+    # at multiple adjacent bins or repeated values.
+    eps = np.finfo(float).eps * max(1.0, abs(max_peak))
+    lower_peaks = finite_pz[finite_pz < (max_peak - eps)]
+    if lower_peaks.size == 0:
+        return np.inf
+
+    second_peak = np.max(lower_peaks)
+
+    if second_peak <= 0:
+        return np.inf
+
+    return max_peak / second_peak
+
+
+def check_arc_quality(meta, peak_rh, max_amp, noise, lsp, peak2second=None):
     """Apply QC filters to a single arc. Returns (passed, fail_reason)."""
     e1 = meta['e1']; e2 = meta['e2']
     ediff = lsp['ediff']
     min_height = lsp['minH']; max_height = lsp['maxH']
     pk_noise = lsp['PkNoise']; del_t_max = lsp['delTmax']
+    pk_second = lsp.get('peak2second', 0.0)
     try:
         req_amp = lsp['reqAmp'][lsp['freqs'].index(meta['freq'])]
     except (ValueError, IndexError):
@@ -600,6 +639,11 @@ def check_arc_quality(meta, peak_rh, max_amp, noise, lsp):
         return False, 'amp'
     if max_amp / noise <= pk_noise:
         return False, 'pk2noise'
+    if (pk_second is not None) and (pk_second > 0):
+        if peak2second is None:
+            return False, 'pk2second'
+        if peak2second <= pk_second:
+            return False, 'pk2second'
     if meta['delT'] >= del_t_max:
         return False, 'delT'
 
